@@ -169,9 +169,16 @@ def comm_broadcast(comm, rank, nParties, w, v, Vi, Li, isQCorr, Lc, is_biz):
         bad = ""
         if is_biz:
             bad = "B"
+            v1 = np.random.randint(w)
+            v2 = np.random.randint(w)
+            while v2 == v1:
+                v2 = np.random.randint(w)
         for i in range(2, nParties+1):
             if is_biz:
-                v = np.random.randint(w+1)
+                if i <= int((nParties+1)/2):
+                    v = v1
+                else:
+                    v = v2
             P = {x for x in isQCorr if Lc[x] == v}
             # mpi_print(f"[{bad}{rank} -> {i}]", (P, v, set()))
             send_pvl(comm, rank, i, P, v, set(), is_biz)
@@ -261,10 +268,22 @@ def lieu_broadcast(comm, rank, nParties, P, v, L, is_biz):
         if i == rank:
             continue
         sent = 1
-        if is_biz:
-            sent = np.random.randint(2)  # Los bizantinos a veces no envían nada
+        if is_biz: # in case the general is dishonest he can do the following things
+            dis_action = np.random.randint(4) # he will do a random action between 4 possible options
+            if dis_action == 0:
+                sent = np.random.randint(2)  # sometimes sends information sometimes does not do anything
+                mpi_print(f"The action for general {rank} is: maybe not sending inf {sent}")
+            elif dis_action == 1:
+                v = np.random.randint(nParties+1) # a random order is sent
+                mpi_print(f"The action for general {rank} is: sending order {v}")
+            elif dis_action == 2:
+                P.clear() # deletes all the information in P
+                mpi_print(f"The action for general {rank} is: empty P {P}")
+            else:
+                L.clear() # deletes all the information in L
+                mpi_print(f"The action for general {rank} is: empy L {L}")
         if sent:
-            send_pvl(comm, rank, i, P, v, L, is_biz)
+                send_pvl(comm, rank, i, P, v, L, is_biz)
 
 
 def lieu_receive(comm, rank, P, v, L, nParties, w, round, Vi, Li, is_biz, num_biz):
@@ -288,7 +307,7 @@ def decide_order(Vi, v, is_comm):
 
 
 def QBA(sizeL, nDishonest):
-    comm = MPI.COMM_WORLD  # El comunicador
+    comm = MPI.COMM_WORLD;  # El comunicador
     size = comm.Get_size()  # Cuantos nodos tenemos, contando el generador de partículas QSD
     rank = comm.Get_rank()  # Qué nodo es este
     
