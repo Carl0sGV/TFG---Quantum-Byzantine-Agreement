@@ -133,7 +133,7 @@ def particle_comm(comm, rank, nParties, nQubits, w, sizeL):
     Li = None
     Lc = None
     if rank == 0:  # Generamos partículas, las enviamos y cada general las mide
-        mpi_print("w =", w)
+        mpi_print("|W| =", w)
         # Step 1
         # Generation, preparation and distribution of particles
         rawS = generacionListas(nParties, sizeL, nQubits, w) # S is a list containing the lists of each general and w the nº of possible orders
