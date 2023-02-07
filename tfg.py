@@ -15,9 +15,9 @@ def mpi_print(*args, **kwargs):
 def notQCorrelated(nParties, nQubits):
     size = (nParties+1)*nQubits
     gate = qs.QGate(size,0,"not Q-Correlated")
-    for i in range(nQubits,size): #aplicar hadamard a todos los grupos menos al primero, particulas tipo 0 y mitad tipo 1
+    for i in range(nQubits,size): #apply hadamard to all the groups but the first, particles of type 0 y half of type 1
         gate.add_operation("H", targets=i)
-    for i in range(nQubits): #entrelazar los qubits del segundo grupo con los del primero, particulas tipo 1
+    for i in range(nQubits): #entangle the qubits of the second group with the first one, type 1 particles
         gate.add_operation("X", targets=i, controls=i+nQubits)
     return gate    
 
@@ -25,28 +25,28 @@ def notQCorrelated(nParties, nQubits):
 def qCorrelated(nParties, nQubits):
     size = (nParties+1)*nQubits
     gate = qs.QGate(size,0,"Q-Correlated")
-    for i in range(nQubits): # aplicamos hadamard a los primeros n qubits
+    for i in range(nQubits): # apply hadamard to the firtst n qubits
         gate.add_operation("H", targets=i)
     rands = np.arange(1, nParties+1)
     np.random.shuffle(rands)
     # mpi_print("randy", rands)
-    for i in range(1,nParties+1): # para todos los gemerales menos el primer grupo del comandante
-        i_bin = f"{rands[i-1]:0{nQubits}b}" # transformamos el numero en binario
-        for j in range(nQubits): # iteramos por cada digito del numero en binario
-            if i_bin[j] == "1": # si es 1 aplicamos not, i nos dice sobre que general y j nos dice sobre que qubit de ese general aplicamos la puerta
+    for i in range(1,nParties+1): # for all the generals but the first group of the commander
+        i_bin = f"{rands[i-1]:0{nQubits}b}" # transform the number to binary
+        for j in range(nQubits): # iterate for each digite of the binary number
+            if i_bin[j] == "1": # if 1 apply not, i tells us over which general and j tells us over which qubit of that general apply the gate
                 gate.add_operation("X", targets=i*nQubits+j)
-    for i in range(nQubits, size): # entrelazamos los qubits del primer grupo del comandante con los qubits del resto de grupos
+    for i in range(nQubits, size): # entangle the qubits of the first group of the commander with the qubits of the rest of the groups
         gate.add_operation("X", targets=i, controls=i%nQubits)
     return gate
 
 
 def genQCorrCircuit(nParties, nQubits):
-    size = (nParties+1)*nQubits # qubits totales del circuito
+    size = (nParties+1)*nQubits # total qubits of the circuit
     
-    qCircuit = qs.QCircuit(size,size,"Q-Correlated Circuit") # generamos circuito de Q-correlacionados
+    qCircuit = qs.QCircuit(size,size,"Q-Correlated Circuit") # generate Q-Correlated circuit
     qCircuit.add_operation(qCorrelated(nParties,nQubits))
     
-    for i in range(size): # medimos todos los qubits de ambos circuitos
+    for i in range(size): #  we measure all the qubits of the circuit
         qCircuit.add_operation("MEASURE", targets=i, outputs=i)
     
     return qCircuit
@@ -54,12 +54,12 @@ def genQCorrCircuit(nParties, nQubits):
 
 
 def genNQCorrCircuit(nParties, nQubits):
-    size = (nParties+1)*nQubits # qubits totales del circuito
+    size = (nParties+1)*nQubits # total qubits of the circuit
     
-    notQCircuit = qs.QCircuit(size,size,"Not Q-Correlated Circuit") # generamos circuito de no Q-correlacionados
+    notQCircuit = qs.QCircuit(size,size,"Not Q-Correlated Circuit") # generate not Q-Correlated circuit
     notQCircuit.add_operation(notQCorrelated(nParties,nQubits))
     
-    for i in range(size): # medimos todos los qubits de ambos circuitos
+    for i in range(size): # we measure all the qubits of the circuit
         notQCircuit.add_operation("MEASURE", targets=i, outputs=i)
     
     return notQCircuit
@@ -73,11 +73,11 @@ def generacionListas(nParties, size, nQubits, w):
     
     circuit_gen = [(lambda: nqCirc), (lambda: genQCorrCircuit(nParties, nQubits))]
 
-    exec = qs.Drewom() # creamos el ejecutor para las simulaciones
+    exec = qs.Drewom() # creation of the executor for the simulations
     raw = [[] for i in range(nParties+1)]
 
     for isQCorr in qCorrelados:
-        res = exec.execute(circuit_gen[isQCorr]())[0] # ejecutamos el circuito para no q-correlacionados si isQcorr == 0 o el circuito para qcorrelacionados si esQcorr == 1
+        res = exec.execute(circuit_gen[isQCorr]())[0] # execute the circuit for not q-correlated if isQcorr == 0 or the circuit for qcorrelated if esQcorr == 1
         for i in range(nParties+1):
             raw[i] += res[i*nQubits:i*nQubits+nQubits]
         
@@ -85,33 +85,33 @@ def generacionListas(nParties, size, nQubits, w):
 
 
 def consistent(v, L, w):
-    # Cond 1: Todas las listas en 𝓛 deben tener el mismo tamaño para ser consistentes
-    it = iter(L)  # Como L es un conjunto, no podemos indexarlo. Debemos usar un iterador.
+    # Cond 1: All the lists in 𝓛 must have the same size to be consistent
+    it = iter(L)  # As L is a set, we cannot index it. We must use an iterator.
     the_len = len(next(it))
     if not all(len(subL) == the_len for subL in it):
         return False
-    # Cond 2: Todas las listas en 𝓛 están formadas por elementos en W - {v}
+    # Cond 2: All the lists in 𝓛 are created by elements in W - {v}
     if not all(all(0 <= x <= w and x != v for x in subL) for subL in L):
         return False
-    # Cond 3: Para cada posible par de listas, los elementos en la posición k son diferentes
+    # Cond 3: For each possible pair of lists, the elements at position k are different
     pairs = itertools.combinations(L, 2)
     return all(all(Li[k] != Lj[k] for k in range(the_len)) for Li, Lj in pairs)
 
 
 def dishonest_comm(comm, rank, nParties, nDishonest):
     im_dishonest = False
-    if rank == 0:  # Código a ejecutar por el QSD
-        # Decidimos quién es deshonesto. Esto no lo hace el QSD, pero es lo único similar a un nodo "maestro" que tenemos.
+    if rank == 0:  # Code to execute by the QSD
+        # Deciding who is dishonest. This is not done by the QSD, but it is the only thing available that can act as a "master" node.
         dishonest_ids = np.random.choice(np.arange(1, nParties+1), nDishonest, replace=False)
         
         reqs = [None for i in range(1, nParties+1)]
         for i in range(1, nParties+1):
             buffer = np.array(i in dishonest_ids, dtype=int)
-            reqs[i-1] = comm.Isend([buffer, MPI.INT], dest=i)  # Enviamos a cada general un mensaje indicando si es deshonesto
-            reqs[i-1].Test()  # Comenzamos el envío. Si no se llama a Test o a Wait, Isend no hace nada (en esta implementación de MPI)
+            reqs[i-1] = comm.Isend([buffer, MPI.INT], dest=i)  # Send to each general a message telling if is dishonest
+            reqs[i-1].Test()  # Start sending. If Test or Wait are not called, Isend does not do anything (for this implementation of MPI)
         for i in range(nParties):
             if not reqs[i].Test():
-                reqs[i].Wait()  # Esperamos a que el envío se haya realizado
+                reqs[i].Wait()  # Wait until the sending is completed
         return dishonest_ids
     else:
         buffer = np.empty(1, dtype=int)
@@ -132,40 +132,40 @@ def measure_to_ints(raw, sizeL, nQubits):
 def particle_comm(comm, rank, nParties, nQubits, w, sizeL):
     Li = None
     Lc = None
-    if rank == 0:  # Generamos partículas, las enviamos y cada general las mide
+    if rank == 0:  # Generate particles, send them and each general measures them
         mpi_print("|W| =", w)
         # Step 1
         # Generation, preparation and distribution of particles
         rawS = generacionListas(nParties, sizeL, nQubits, w) # S is a list containing the lists of each general and w the nº of possible orders
         
         reqs = [None for i in range(nParties+1)]
-        reqs[0] = comm.Isend([rawS[0], MPI.INT], dest=1)  # Mandamos la extra al comandante
+        reqs[0] = comm.Isend([rawS[0], MPI.INT], dest=1)  # Send the extra one to the commander
         reqs[0].Test()
         for i in range(1, nParties+1):
-            reqs[i] = comm.Isend([rawS[i], MPI.INT], dest=i)  # Enviamos a cada general las partículas
+            reqs[i] = comm.Isend([rawS[i], MPI.INT], dest=i)  # Send particles to each general
             reqs[i].Test()
         for i in range(nParties + 1):
             if not reqs[i].Test():
-                reqs[i].Wait()  # Esperamos a que todos lo reciban
+                reqs[i].Wait()  # Wait until all receive
     else:
         buffer = np.empty(nQubits * sizeL, dtype=int)
         req = comm.Irecv([buffer, MPI.INT], source=0)
         req.Test()
-        if rank == 1:  # El comandante recibe dos
+        if rank == 1:  # The commander receives two
             bufferC = np.empty(nQubits * sizeL, dtype=int)
             req2 = comm.Irecv([bufferC, MPI.INT], source=0)
             req2.Wait()
-            Lc = measure_to_ints(bufferC, sizeL, nQubits) # traducimos los resultados de las medidas de binario a decimal
+            Lc = measure_to_ints(bufferC, sizeL, nQubits) # translate the results of the measurements from binary to decimal
             mpi_print(f"[{rank}]: Lc =", Lc)
         req.Wait()
-        Li = measure_to_ints(buffer, sizeL, nQubits) # traducimos los resultados de las medidas de binario a decimal
+        Li = measure_to_ints(buffer, sizeL, nQubits) # translate the results of the measurements from binary to decimal
         mpi_print(f"[{rank}]: L{rank} =", Li)
     return Li, Lc
 
 
 def comm_broadcast(comm, rank, nParties, w, v, Vi, Li, isQCorr, Lc, is_biz):
     if rank == 1:
-        # Paso 2
+        # Step 2
         bad = ""
         if is_biz:
             bad = "B"
@@ -183,16 +183,16 @@ def comm_broadcast(comm, rank, nParties, w, v, Vi, Li, isQCorr, Lc, is_biz):
             # mpi_print(f"[{bad}{rank} -> {i}]", (P, v, set()))
             send_pvl(comm, rank, i, P, v, set(), is_biz)
     elif rank != 0:
-        # Paso 3 a
+        # Step 3 a
         P, v, L = recv_pvl(comm, rank, 1)
-        # Paso 3 a i
-        L.add(tuple(Li[j] for j in P))  # Un conjunto de listas no se puede porque no son hashables. Un conjunto de tuplas sí (son inmutables)
+        # Step 3 a i
+        L.add(tuple(Li[j] for j in P))  # A set of lists is not possible because they are not hashables. A set of tuples yes (they are inmutables)
         mpi_print(f"[{rank}] L = {L}")
-        # Paso 3 a ii
+        # Step 3 a ii
         if consistent(v, L, w): # if (v, L) is consistent then
-            # Paso 3 a ii A
+            # Step 3 a ii A
             Vi.add(v) # adds to V the order v
-            # Paso 3 a ii B
+            # Step 3 a ii B
             lieu_broadcast(comm, rank, nParties, P, v, L, is_biz)
 
 
@@ -287,14 +287,14 @@ def lieu_broadcast(comm, rank, nParties, P, v, L, is_biz):
 
 
 def lieu_receive(comm, rank, P, v, L, nParties, w, round, Vi, Li, is_biz, num_biz):
-    # Paso 3 b i
-    L.add(tuple(Li[j] for j in P))  # Un conjunto de listas no se puede porque no son hashables. Un conjunto de tuplas sí (son inmutables)
+    # Step 3 b i
+    L.add(tuple(Li[j] for j in P))  # A set of lists is not possible because they are not hashables. A set of tuples yes (they are inmutables)
     # mpi_print(f"[{rank}] L = {L}")
     # Paso 3 b ii
     if consistent(v, L, w) and v not in Vi and len(L) == round + 1: # if (v, L) is consistent then
-        # Paso 3 b ii A
+        # Step 3 b ii A
         Vi.add(v) # adds to V the order v
-        # Paso 3 b ii B
+        # Step 3 b ii B
         if round <= num_biz:
             lieu_broadcast(comm, rank, nParties, P, v, L, is_biz)
     # mpi_print(f"[{rank}] V{rank} = {Vi}")
@@ -307,45 +307,45 @@ def decide_order(Vi, v, is_comm):
 
 
 def QBA(sizeL, nDishonest):
-    comm = MPI.COMM_WORLD;  # El comunicador
-    size = comm.Get_size()  # Cuantos nodos tenemos, contando el generador de partículas QSD
-    rank = comm.Get_rank()  # Qué nodo es este
+    comm = MPI.COMM_WORLD;  # The communicator
+    size = comm.Get_size()  # How many nodes we have, counting the particle generator QSD
+    rank = comm.Get_rank()  # Which node is this
     
-    nParties = size - 1  # Numero de generales, contando al comandante
+    nParties = size - 1  # Number of generals, counting the commander
     
-    # Todos deben saber cuántos qubits corresponden a cada uno y el valor de w.
-    nQubits = int(np.ceil(np.log2(nParties+1))) # qubits necesarios para codificar el valor de w
+    # All must know how many qubits correspond to each one and the value of w.
+    nQubits = int(np.ceil(np.log2(nParties+1))) # qubits needed to codify the w value
     w = 2**nQubits # nº of possible orders
     
-    im_dishonest = dishonest_comm(comm, rank, nParties, nDishonest)  # Si este nodo es deshonesto o no
-    # Paso 1 a
-    Li, Lc = particle_comm(comm, rank, nParties, nQubits, w, sizeL)  # Obtención de la lista Li (y de la lista extra Lc en el caso del comandante)
+    im_dishonest = dishonest_comm(comm, rank, nParties, nDishonest)  # If this node is dishonest or not
+    # Step 1 a
+    Li, Lc = particle_comm(comm, rank, nParties, nQubits, w, sizeL)  # Obtaining the list Li (and list Lc for the commander)
     isQCorrList = None
     v = None
     if rank == 1:
-        # Paso 1 b
+        # Step 1 b
         isQCorrList = {i for i in range(sizeL) if Li[i] != Lc[i]}
         mpi_print("isQCorr = ", isQCorrList)
         v = np.random.randint(w) # order transmitted by the commander, random value
         mpi_print("v =", v)
     
     Vi = set()
-    # Pasos 2 y 3 a
+    # Steps 2 and 3 a
     comm_broadcast(comm, rank, nParties, w, v, Vi, Li, isQCorrList, Lc, im_dishonest)
-    comm.Barrier()  # Después de enviar todos se sincronizan
-    # Paso 3 b
+    comm.Barrier()  # After sending all synchronize
+    # Step 3 b
     for round in range(1, nDishonest + 2):
         if rank > 1:
             status = MPI.Status()
             PvLs = []
-            while comm.Iprobe(source=MPI.ANY_SOURCE, status=status):  # Si tengo un PvL pendiente de ser recibido
+            while comm.Iprobe(source=MPI.ANY_SOURCE, status=status):  # If there is a PvL pending of reception
                 src = status.Get_source()
                 P, v, L = recv_pvl(comm, rank, src)
                 PvLs.append((P, (v, L)))
-            # Paso 3 b (if)
+            # Step 3 b (if)
             for P, (v, L) in PvLs:
                 lieu_receive(comm, rank, P, v, L, nParties, w, round, Vi, Li, im_dishonest, nDishonest)
-        comm.Barrier()  # Después de enviar todos se sincronizan
+        comm.Barrier()  # After send all synchronize
     if rank > 1 and not im_dishonest:
         mpi_print(f"[{rank}] V{rank} = {Vi}")
     result = np.empty(nParties, dtype=int)
